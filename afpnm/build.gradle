@@ -30,3 +30,11 @@ android {
         jvmTarget = '1.8'
     }
 }
+
+dependencies {
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.10.0"))
+    implementation("com.squareup.okhttp3:okhttp")
+
+    implementation platform('com.google.firebase:firebase-bom:31.1.1')
+    implementation 'com.google.firebase:firebase-perf-ktx'
+}
