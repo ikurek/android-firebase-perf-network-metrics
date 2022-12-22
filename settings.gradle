@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "AndroidFirebasePerfNetworkMetrics"
-include ':app'
+include ':afpnm'
