@@ -1,13 +1,14 @@
 package com.ikurek.android.afpnm
 
 import com.google.firebase.perf.FirebasePerformance
-import com.google.firebase.perf.ktx.trace
 import com.google.firebase.perf.util.Constants.MAX_ATTRIBUTE_KEY_LENGTH
 import com.google.firebase.perf.util.Constants.MAX_ATTRIBUTE_VALUE_LENGTH
 import com.google.firebase.perf.util.Constants.MAX_TRACE_CUSTOM_ATTRIBUTES
+import com.ikurek.android.afpnm.Constants.Headers.APOLLO_HEADER_OPERATION_ID
 import com.ikurek.android.afpnm.model.TraceAttribute
+import com.ikurek.android.afpnm.processor.ApolloRequestProcessor
+import com.ikurek.android.afpnm.processor.RestRequestProcessor
 import okhttp3.Interceptor
-import okhttp3.Request
 import okhttp3.Response
 
 
@@ -19,45 +20,34 @@ class FirebasePerformanceInterceptor private constructor(
     private val setResponseHttpCode: Boolean,
     private val setResponsePayloadSize: Boolean
 ) : Interceptor {
+    private val apolloRequestProcessor: ApolloRequestProcessor = ApolloRequestProcessor(
+        customAttributes = customAttributes,
+        performanceInstance = performanceInstance,
+        setRequestPayloadSize = setRequestPayloadSize,
+        setResponseContentType = setResponseContentType,
+        setResponseHttpCode = setResponseHttpCode,
+        setResponsePayloadSize = setResponsePayloadSize
+    )
+    private val restRequestProcessor: RestRequestProcessor = RestRequestProcessor(
+        customAttributes = customAttributes,
+        performanceInstance = performanceInstance,
+        setRequestPayloadSize = setRequestPayloadSize,
+        setResponseContentType = setResponseContentType,
+        setResponseHttpCode = setResponseHttpCode,
+        setResponsePayloadSize = setResponsePayloadSize
+    )
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        lateinit var response: Response
-        val request: Request = chain.request()
-
-        val metric = performanceInstance.newHttpMetric(
-            request.url.toUrl(),
-            request.method
-        )
-
-        metric.trace {
-            response = chain.proceed(request)
-
-            // Metrics for request
-            if (setRequestPayloadSize) {
-                setRequestPayloadSize(request.body?.contentLength() ?: -1)
-            }
-
-            // Metrics for response
-            if (setResponseHttpCode) {
-                setHttpResponseCode(response.code)
-            }
-            if (setResponseContentType) {
-                setResponseContentType(response.body?.contentType().toString())
-            }
-            if (setResponsePayloadSize) {
-                setResponsePayloadSize(response.body?.contentLength() ?: -1)
-            }
-
-            // Custom attributes
-            customAttributes.forEach { attribute ->
-                when (attribute) {
-                    is TraceAttribute.Custom -> putAttribute(attribute.key, attribute.value)
-                    else -> { /* Do nothing */ }
-                }
-            }
+        /**
+         * Apollo-generated headers can be used to determine if the request comes from Apollo
+         * By default Apollo attaches unique `X-APOLLO-OPERATION-ID` to each request so if that
+         * header is present the request is most probably coming from Apollo
+         */
+        return if (chain.request().headers[APOLLO_HEADER_OPERATION_ID].isNullOrBlank().not()) {
+            apolloRequestProcessor.process(chain)
+        } else {
+            restRequestProcessor.process(chain)
         }
-
-        return response.newBuilder().build()
     }
 
 
@@ -130,13 +120,17 @@ class FirebasePerformanceInterceptor private constructor(
              */
             customAttributes.forEach { attribute ->
                 if (attribute.key.length > MAX_ATTRIBUTE_KEY_LENGTH) {
-                    error("Custom trace attribute ${attribute.key} key can't " +
-                            "exceed $MAX_ATTRIBUTE_KEY_LENGTH characters")
+                    error(
+                        "Custom trace attribute ${attribute.key} key can't " +
+                                "exceed $MAX_ATTRIBUTE_KEY_LENGTH characters"
+                    )
                 }
 
                 if (attribute is TraceAttribute.Custom && attribute.value.length > MAX_ATTRIBUTE_VALUE_LENGTH) {
-                    error("Custom trace attribute ${attribute.key} value can't " +
-                            "exceed $MAX_ATTRIBUTE_VALUE_LENGTH characters")
+                    error(
+                        "Custom trace attribute ${attribute.key} value can't " +
+                                "exceed $MAX_ATTRIBUTE_VALUE_LENGTH characters"
+                    )
                 }
             }
 
