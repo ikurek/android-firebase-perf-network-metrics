@@ -2,6 +2,8 @@
 
 Firebase Performance network metrics with improved support for OkHTTP and Apollo GraphQL
 
+![](https://img.shields.io/jitpack/version/com.github.ikurek/android-firebase-perf-network-metrics)
+![](https://img.shields.io/github/v/release/ikurek/android-firebase-perf-network-metrics?label=github)
 ## Introduction
 
 AFPNM library is mostly meant to make Firebase Performance network metrics usable with Apollo
@@ -145,12 +147,35 @@ page
 
 ### Getting the package
 
-For now, the library is not distributed anywhere, but it will probably be published on a Maven
-repository in the nearest future. For now, the best way to use the library is:
+Add [jitpack.io](https://jitpack.io) repository to the project-level `settings.gradle`
 
-1. Clone the repository
-2. Build the library AAR file
-3. Add the AAR to the project as an external dependency
+Groovy:
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+```
+
+
+Kotlin:
+```kotlin
+repositories {
+    maven(url = "https://jitpack.io")
+}
+```
+
+And add the package dependency in `build.gradle`:
+
+Groovy:
+```groovy
+implementation 'com.github.ikurek:android-firebase-perf-network-metrics:1.0.0'
+```
+
+
+Kotlin:
+```kotlin
+implementation("com.github.ikurek:android-firebase-perf-network-metrics:1.0.0")
+```
 
 ### Enabling the interceptor
 
