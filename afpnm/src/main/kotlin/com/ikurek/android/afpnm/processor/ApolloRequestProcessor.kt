@@ -7,8 +7,10 @@ import com.ikurek.android.afpnm.model.TraceAttribute
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
+import java.net.URL
 
 internal class ApolloRequestProcessor(
+    private val appendGraphQlOperationToUrl: Boolean,
     private val customAttributes: List<TraceAttribute>,
     private val performanceInstance: FirebasePerformance,
     override val setRequestPayloadSize: Boolean,
@@ -23,8 +25,14 @@ internal class ApolloRequestProcessor(
 
         val apolloOperationName: String = request.headers[APOLLO_HEADER_OPERATION_NAME].orEmpty()
 
+        val apolloUrl: URL = if (appendGraphQlOperationToUrl) {
+            request.url.newBuilder().addPathSegment(apolloOperationName).build()
+        } else {
+            request.url
+        }.toUrl()
+
         val metric = performanceInstance.newHttpMetric(
-            request.url.toUrl(),
+            apolloUrl,
             request.method
         )
 

@@ -13,6 +13,7 @@ import okhttp3.Response
 
 
 class FirebasePerformanceInterceptor private constructor(
+    private val appendGraphQlOperationToUrl: Boolean,
     private val customAttributes: List<TraceAttribute>,
     private val performanceInstance: FirebasePerformance,
     private val setRequestPayloadSize: Boolean,
@@ -21,6 +22,7 @@ class FirebasePerformanceInterceptor private constructor(
     private val setResponsePayloadSize: Boolean
 ) : Interceptor {
     private val apolloRequestProcessor: ApolloRequestProcessor = ApolloRequestProcessor(
+        appendGraphQlOperationToUrl = appendGraphQlOperationToUrl,
         customAttributes = customAttributes,
         performanceInstance = performanceInstance,
         setRequestPayloadSize = setRequestPayloadSize,
@@ -52,6 +54,19 @@ class FirebasePerformanceInterceptor private constructor(
 
 
     data class Builder(
+        /**
+         * Defines if GraphQL request URL should be appended with GraphQL operation name
+         *
+         * By default, Firebase Performance does not allow to separate GraphQL requests by operation
+         * while REST requests can be separated by the URL path, there's no way to differentiate
+         * GraphQL operations. By appending the operation name to URL GraphQL operations can be
+         * traced and filtered the same way REST operations are.
+         *
+         * For example, if the option is enabled, operation `GetUsers` on `host.com/graphql` will
+         * be traced as a request to `host.com/graphql/GetUsers`
+         */
+        var appendGraphQlOperationToUrl: Boolean = true,
+
         /**
          * A list of custom attributes that can be optionally attached to the trace. The overall number
          * of attributes can't exceed [MAX_TRACE_CUSTOM_ATTRIBUTES]. Bu default, the
@@ -135,6 +150,7 @@ class FirebasePerformanceInterceptor private constructor(
             }
 
             return FirebasePerformanceInterceptor(
+                appendGraphQlOperationToUrl = appendGraphQlOperationToUrl,
                 customAttributes = customAttributes,
                 performanceInstance = performanceInstance,
                 setRequestPayloadSize = setRequestPayloadSize,
